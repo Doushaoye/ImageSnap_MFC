@@ -1,0 +1,81 @@
+{
+	"imagelabel" : 
+	{
+		"Object" : 
+		[
+			{
+				"class" : "rect\box",
+				"name" : "aeroplane",
+				"property" : 
+				{
+					"difficult" : 0,
+					"occluded" : false,
+					"truncated" : false
+				},
+				"rect" : 
+				{
+					"p1" : 
+					[
+						260,
+						99
+					],
+					"p2" : 
+					[
+						433,
+						230
+					]
+				}
+			},
+			{
+				"class" : "rect\box",
+				"name" : "aeroplane",
+				"property" : 
+				{
+					"difficult" : 0,
+					"occluded" : false,
+					"truncated" : false
+				},
+				"rect" : 
+				{
+					"p1" : 
+					[
+						133,
+						119
+					],
+					"p2" : 
+					[
+						193,
+						235
+					]
+				}
+			},
+			{
+				"class" : "rect\box",
+				"name" : "aeroplane",
+				"property" : 
+				{
+					"difficult" : 0,
+					"occluded" : false,
+					"truncated" : false
+				},
+				"rect" : 
+				{
+					"p1" : 
+					[
+						511,
+						100
+					],
+					"p2" : 
+					[
+						559,
+						278
+					]
+				}
+			}
+		],
+		"street" : "road",
+		"time" : "morning",
+		"weather" : "clear"
+	},
+	"name" : "150664579442935400_a580xH"
+}

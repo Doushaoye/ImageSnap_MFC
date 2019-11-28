@@ -1,0 +1,8 @@
+0 background
+1 stopline
+2 trafficlight
+3 car
+4 Pedestrian
+5 Cyclist
+6 trafficsign
+7 streetlight
