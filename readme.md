@@ -37,7 +37,7 @@
 ## set.json
 * 该文件为子标签属性配置文件，编码格式`ANSI`
 
-    ```json
+    ```js
     {
         "person"://person标签子属性列表
         {
