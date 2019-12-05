@@ -255,6 +255,16 @@ BEGIN
         MENUITEM "多边形",                         ID_Polygon
         MENUITEM "曲线",                          ID_Curve
     END
+    POPUP "图片标签"
+    BEGIN
+        MENUITEM "添加",                          ID_32803
+        MENUITEM "删除",                          ID_32804
+    END
+    POPUP "载入模式"
+    BEGIN
+        MENUITEM "继承上一张",                       ID_32805
+        MENUITEM "清空全部",                        ID_32807
+    END
     POPUP "设置"
     BEGIN
         MENUITEM "设置选择",                        ID_SET_SELECT
@@ -265,15 +275,12 @@ BEGIN
     BEGIN
         MENUITEM "关于 ImageSnap(&A)...",         ID_APP_ABOUT
     END
-    POPUP "图片标签"
+    POPUP "文件处理"
     BEGIN
-        MENUITEM "添加",                          ID_32803
-        MENUITEM "删除",                          ID_32804
-    END
-    POPUP "载入模式"
-    BEGIN
-        MENUITEM "继承上一张",                       ID_32805
-        MENUITEM "清空全部",                        ID_32807
+        MENUITEM "JSON->XML",                   ID_32808
+        MENUITEM "XML->JSON",                   ID_32810
+        MENUITEM "统计改动率",                       ID_32809
+        MENUITEM "标注统计",                        ID_32811
     END
 END
 

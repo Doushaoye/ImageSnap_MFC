@@ -72,14 +72,14 @@ BOOL CDlgSetSelect::OnInitDialog()
 	m_CBmodelOOP.SetCurSel(m_iOOP);
 	m_bPart = FALSE;
 	//((CButton*)GetDlgItem(IDC_CHECK1))->SetCheck(1);
-	//std::vector<std::pair<int, std::string> > lines_2;
+	//std::vector<std::pair<int, std::string> > lines_zh;
 	//std::ifstream infile("21cls.txt");
 	//int nId;
 	//string clsname;
 	//while (infile >> nId >> clsname)
 	//{	
 
-	//	lines_2.push_back(std::make_pair(nId, clsname));
+	//	lines_zh.push_back(std::make_pair(nId, clsname));
 
 	//}
 	//infile.close();
@@ -88,14 +88,14 @@ BOOL CDlgSetSelect::OnInitDialog()
 	m_CBmodelObjCls.InsertString(i, "Æû³µ");
 	m_CBmodelObjCls.InsertString(i, "ÌúÂ·");*/
 
-	std::vector<std::pair<int, std::string> > lines_2 = m_pDoc->lines_2;
+	std::vector<std::pair<int, std::string> > lines_zh = m_pDoc->lines_zh;
 	std::vector<CString> data_list;
-	for (unsigned int i=0;i<lines_2.size();i++)
+	for (unsigned int i=0;i<lines_zh.size();i++)
 	{
-		data_list.push_back(lines_2[i].second.c_str());
-		m_CBmodelObjCls.InsertString(0,lines_2[lines_2.size()-i-1].second.c_str());
-		vec_zhcls.push_back(lines_2[i].second.c_str());
-		//printf("%s\n",lines_2[i].second.c_str());
+		data_list.push_back(lines_zh[i].second.c_str());
+		m_CBmodelObjCls.InsertString(0,lines_zh[lines_zh.size()-i-1].second.c_str());
+		vec_zhcls.push_back(lines_zh[i].second.c_str());
+		//printf("%s\n",lines_zh[i].second.c_str());
 	}
 	//int tmp_class=0;
 	m_CMemoryEdit.Create(data_list,&m_iObjCls,WS_CHILD | WS_VISIBLE | WS_VSCROLL | CBS_AUTOHSCROLL | CBS_NOINTEGRALHEIGHT, CRect(30, 70, 200, 300), this, 1001);

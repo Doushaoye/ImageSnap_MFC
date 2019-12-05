@@ -769,23 +769,23 @@ void CPropertiesWnd::UpdataAllData(vector <_Object> Objlist, int expendobj, int 
 		pGroupObj->AddSubItem(pPropIndex);
 //(CMainFrame   *)
 		
-		//MessageBox(pCurrentDoc->lines_2[1].second.c_str());
-		//printf("%s\n",pCurrentDoc->lines_2[1].second.c_str());
+		//MessageBox(pCurrentDoc->lines_zh[1].second.c_str());
+		//printf("%s\n",pCurrentDoc->lines_zh[1].second.c_str());
 
 		char wholeszType[500] = {0};
 		char currType[40]={30};
 		sprintf_s(currType,40,"%d",tmp_class);
 		sprintf_s(wholeszType,500,"%s ","其中之一:");
-		//for (unsigned int k=0;k<pCurrentDoc->lines_2.size();k++)
+		//for (unsigned int k=0;k<pCurrentDoc->lines_zh.size();k++)
 		//{
-		//	sprintf_s(wholeszType, 100000,"%s %s.",wholeszType,pCurrentDoc->lines_2[k].second.c_str());
+		//	sprintf_s(wholeszType, 100000,"%s %s.",wholeszType,pCurrentDoc->lines_zh[k].second.c_str());
 		//}
 		/////////////////////////////
 		CMFCPropertyGridProperty* pPropClass = new CMFCPropertyGridProperty(_T("目标类别"), currType,wholeszType /*_T("其中之一: 铁路，汽车")*/);
 		
-		//for (unsigned int k=0;k<pCurrentDoc->lines_2.size();k++)
+		//for (unsigned int k=0;k<pCurrentDoc->lines_zh.size();k++)
 		//{
-		//	pPropClass->AddOption(pCurrentDoc->lines_2[k].second.c_str());
+		//	pPropClass->AddOption(pCurrentDoc->lines_zh[k].second.c_str());
 		//}
 		
 		//pPropClass->AddOption(_T("汽车"));
@@ -1091,23 +1091,23 @@ void CPropertiesWnd::UpdataAllData(vector <_Polygon> Objlist, int expendobj, int
 		pGroupObj->AddSubItem(pPropIndex);
 		//(CMainFrame   *)
 
-		//MessageBox(pCurrentDoc->lines_2[1].second.c_str());
-		//printf("%s\n",pCurrentDoc->lines_2[1].second.c_str());
+		//MessageBox(pCurrentDoc->lines_zh[1].second.c_str());
+		//printf("%s\n",pCurrentDoc->lines_zh[1].second.c_str());
 
 		char wholeszType[500] = { 0 };
 		char currType[30] = { 30 };
 		sprintf_s(currType, 30, "%d", tmp_class);
 		sprintf_s(wholeszType, 500, "%s ", "其中之一:");
-		//for (unsigned int k = 0; k<pCurrentDoc->lines_2.size(); k++)
+		//for (unsigned int k = 0; k<pCurrentDoc->lines_zh.size(); k++)
 		//{
-		//	sprintf_s(wholeszType, 100000, "%s %s.", wholeszType, pCurrentDoc->lines_2[k].second.c_str());
+		//	sprintf_s(wholeszType, 100000, "%s %s.", wholeszType, pCurrentDoc->lines_zh[k].second.c_str());
 		//}
 		/////////////////////////////
 		CMFCPropertyGridProperty* pPropClass = new CMFCPropertyGridProperty(_T("目标类别"), currType, wholeszType /*_T("其中之一: 铁路，汽车")*/);
 
-		//for (unsigned int k = 0; k<pCurrentDoc->lines_2.size(); k++)
+		//for (unsigned int k = 0; k<pCurrentDoc->lines_zh.size(); k++)
 		//{
-		//	pPropClass->AddOption(pCurrentDoc->lines_2[k].second.c_str());
+		//	pPropClass->AddOption(pCurrentDoc->lines_zh[k].second.c_str());
 		//}
 
 		//pPropClass->AddOption(_T("汽车"));
@@ -1409,23 +1409,23 @@ void CPropertiesWnd::UpdataAllData(vector <_Curve> Objlist, int expendobj, int e
 		pGroupObj->AddSubItem(pPropIndex);
 		//(CMainFrame   *)
 
-		//MessageBox(pCurrentDoc->lines_2[1].second.c_str());
-		//printf("%s\n",pCurrentDoc->lines_2[1].second.c_str());
+		//MessageBox(pCurrentDoc->lines_zh[1].second.c_str());
+		//printf("%s\n",pCurrentDoc->lines_zh[1].second.c_str());
 
 		char wholeszType[500] = { 0 };
 		char currType[30] = { 30 };
 		sprintf_s(currType, 30, "%d", tmp_class);
 		sprintf_s(wholeszType, 500, "%s ", "其中之一:");
-		//for (unsigned int k = 0; k<pCurrentDoc->lines_2.size(); k++)
+		//for (unsigned int k = 0; k<pCurrentDoc->lines_zh.size(); k++)
 		//{
-		//	sprintf_s(wholeszType, 100000, "%s %s.", wholeszType, pCurrentDoc->lines_2[k].second.c_str());
+		//	sprintf_s(wholeszType, 100000, "%s %s.", wholeszType, pCurrentDoc->lines_zh[k].second.c_str());
 		//}
 		/////////////////////////////
 		CMFCPropertyGridProperty* pPropClass = new CMFCPropertyGridProperty(_T("目标类别"), currType, wholeszType /*_T("其中之一: 铁路，汽车")*/);
 
-		//for (unsigned int k = 0; k<pCurrentDoc->lines_2.size(); k++)
+		//for (unsigned int k = 0; k<pCurrentDoc->lines_zh.size(); k++)
 		//{
-		//	pPropClass->AddOption(pCurrentDoc->lines_2[k].second.c_str());
+		//	pPropClass->AddOption(pCurrentDoc->lines_zh[k].second.c_str());
 		//}
 
 		//pPropClass->AddOption(_T("汽车"));

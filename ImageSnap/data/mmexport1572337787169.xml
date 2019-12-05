@@ -1,0 +1,2 @@
+<annotation>
+	<folder>VOC2007</folder><filename>mmexport1572337787169.jpg</filename><source><database>The VOC2007 Database</database><annotation>PASCAL VOC2007</annotation><image>flickr</image></source><size><width>2736</width><height>3648</height><depth>8</depth></size><segmented>0</segmented><object><name>0</name><pose>Frontal</pose><truncated>0</truncated><occluded>0</occluded><difficult>0</difficult><ischange>0</ischange><bndbox><xmin>771</xmin><ymin>1552</ymin><xmax>1955</xmax><ymax>3534</ymax></bndbox></object></annotation>

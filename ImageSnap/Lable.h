@@ -92,6 +92,7 @@ typedef struct _Part
 
 typedef struct _Object
 {
+	int ischange;
 	int iobjclass;
 	string classname;
 	int pose;

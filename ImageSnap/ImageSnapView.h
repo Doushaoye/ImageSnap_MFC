@@ -28,6 +28,8 @@ public:
 	
 	IplImage* m_pWorkImg;   //图像
 	Point now;
+	CString m_str;          //鼠标悬浮提示文字
+	BOOL    m_istip;
 	int     m_dibFlag;      //位图变化标志
 	int     m_ImageType;    
 	float   m_ZoomFactor;   //缩放比例
@@ -58,7 +60,9 @@ public:
 	vector<_Polygon> m_Polygon;
 
 	CDC* m_pDC;
+	CToolTipCtrl m_tooltip;
 protected:
+
 	IplImage *	m_pSrcImg;
 	HACCEL m_hAccel;
 

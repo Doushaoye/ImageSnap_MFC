@@ -118,18 +118,17 @@ CImageSnapView::CImageSnapView()
 	m_pWorkImg    = NULL;
 	m_pSrcImg     = NULL;
 	m_lpBmi = 0;
+	m_istip = FALSE;
 	m_hAccel=::LoadAccelerators(AfxGetInstanceHandle(),MAKEINTRESOURCE(IDR_ACCELERATOREPORT));
 	m_ZoomFactor = 1.0;
-
+	m_tooltip.Create(this);
+	m_tooltip.Activate(TRUE);
+	m_tooltip.SetTipTextColor(RGB(0, 0, 255));//font color
+	m_tooltip.SetDelayTime(50);//delay time
 	InitData();
-
-
 	CSize sizeTotal;
 	sizeTotal.cx = sizeTotal.cy = 100;
 	SetScrollSizes(MM_TEXT, sizeTotal);
-
-
-	//m_Mutex_move.unlock();
 }
 
 CImageSnapView::~CImageSnapView()
@@ -180,12 +179,8 @@ void CImageSnapView::OnDraw(CDC* pDC)
 		printf("OnDraw获取pDoc失败\n");
 		return;
 	}
-		
-
 	//CRect rect;
-
 	//GetClientRect(&rect);
-
 	//CDC CMemDC; //用于缓冲作图的内存DC
 	//CMemDC.CreateCompatibleDC(pDC);
 	//CDC* MemDC = &CMemDC;
@@ -275,7 +270,7 @@ void CImageSnapView::OnDraw(CDC* pDC)
 			Mat m_pWorkImg_m = m_pWorkImg;
 			int a = pDoc->m_ObjList[i].iobjclass;
 			char is[10];
-			string s = pDoc->lines_2[a].second;
+			string s = pDoc->lines_zh[a].second;
 			_itoa_s(i+1, is, 10);
 			string objecti = is;
 			s = objecti +","+ s;
@@ -400,7 +395,7 @@ void CImageSnapView::OnDraw(CDC* pDC)
 			
 			int a = pDoc->m_Curve[i].iobjclass;
 			char is[10];
-			string s = pDoc->lines_2[a].second;
+			string s = pDoc->lines_zh[a].second;
 			_itoa_s(i + 1 + pDoc->m_ObjList.size() + pDoc->m_Polygon.size(), is, 10);
 			string objecti = is;
 			s = objecti + "," + s + property_s;
@@ -434,7 +429,7 @@ void CImageSnapView::OnDraw(CDC* pDC)
 			cv::Mat m_pWorkImg_m = m_pWorkImg;
 			int a = pDoc->m_Polygon[i].iobjclass;
 			char is[10];
-			string s = pDoc->lines_2[a].second;
+			string s = pDoc->lines_zh[a].second;
 			_itoa_s(i + 1 + pDoc->m_ObjList.size(), is, 10);
 			string objecti = is;
 			s = objecti + "," + s;
@@ -705,6 +700,9 @@ void CImageSnapView::OnMouseMove(UINT nFlags, CPoint point)
 					rect_i = min_pos / 4;
 					if ((*min) < 25)
 					{
+						m_istip = TRUE;
+						m_str;
+						m_str.Format("宽=%d, 高=%d", pDoc->m_ObjList[rect_i].objbox.Width(), pDoc->m_ObjList[rect_i].objbox.Height());
 						m_AbleToLeftBtn = TRUE;
 						SetCursor(LoadCursor(NULL, IDC_SIZEALL));//改变为十字箭头光标
 					}
@@ -1266,6 +1264,10 @@ void CImageSnapView::OnPriorImage()
 		pDoc->m_nPos--;
 		pDoc->OpenFile();
 	}
+	else
+	{
+		AfxMessageBox("到头了");
+	}
 	printf("OnPriorImage完成\n");
 	m_Mutex_move.unlock();
 	return;
@@ -1294,6 +1296,10 @@ void CImageSnapView::OnNextImage()
 		pDoc->m_nPos++;
 		pDoc->OpenFile();
 	}
+	else
+	{
+		AfxMessageBox("到头了");
+	}
 	printf("OnNextImage完成\n");
 
 	m_Mutex_move.unlock();
@@ -1304,7 +1310,7 @@ void CImageSnapView::OnNextImage()
 
 BOOL CImageSnapView::PreTranslateMessage(MSG* pMsg)
 {
-	// TODO: 在此添加专用代码和/或调用基类
+	 //TODO: 在此添加专用代码和/或调用基类
 	if (pMsg->message == WM_KEYDOWN )
 	{
 		UINT nKey = (int)pMsg->wParam;
@@ -1315,10 +1321,24 @@ BOOL CImageSnapView::PreTranslateMessage(MSG* pMsg)
 				if(::TranslateAccelerator(m_hWnd,m_hAccel,pMsg)) 
 					return TRUE;
 		}
+	}
+	if (m_istip)
+	{
+		CPoint pt;
+		CRect clsRect;
+		pt = pMsg->pt;
+		m_tooltip.RelayEvent(pMsg);
 
+		this->ScreenToClient(&pt);
+
+		m_tooltip.AddTool(this, m_str);
+		m_istip = FALSE;
 	}
 
 	return CScrollView::PreTranslateMessage(pMsg);
+
+
+	//return CView::PreTranslateMessage(pMsg);
 }
 
 
@@ -1422,6 +1442,7 @@ void CImageSnapView::OnLButtonUp(UINT nFlags, CPoint point)
 		CImageSnapDoc* pDoc = GetDocument();
 		if (m_rect)
 		{
+			pDoc->m_ischange = 1;
 			pDoc->m_rect_i = rect_i_lock;
 			m_AbleToMove = FALSE;
 			pDoc->SetSelect2(m_ObjorPart);
@@ -1430,6 +1451,7 @@ void CImageSnapView::OnLButtonUp(UINT nFlags, CPoint point)
 		}
 		else if (m_polygon)
 		{
+			pDoc->m_ischange = 1;
 			pDoc->m_polygon_i = polygon_i_lock;
 			m_AbleToMove = FALSE;
 			pDoc->SetSelect3(m_ObjorPart);

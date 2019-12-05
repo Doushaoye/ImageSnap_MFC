@@ -23,6 +23,7 @@ protected: // 仅从序列化创建
 public:
 	IplImage*	m_pWorkImg;
 	int         m_Display;      //图像显示标志
+	int         m_ischange;
 	vector <_Object> m_ObjList;
 	vector<_Curve> m_Curve;
 	vector<_Polygon> m_Polygon;
@@ -40,7 +41,9 @@ public:
 	int          m_polygon_i;
 	int          m_point;
 	CSize  m_sizeDoc;
-
+	int m_width;
+	int m_height;
+	int m_depth;
 
 protected:
 	IplImage *	m_pSrcImg;
@@ -62,8 +65,11 @@ protected:
 	//void ReadJsonSet(string classname);
 	void ReadXmlInfo(CString filename);
 	void OnSaveJson();
+	void OnSaveJson2();
 	BOOL ReadJsonInfo(CString filename);
+	BOOL ReadJsonInfo2(CString filename);
 	void GetAllFileNames(const CString& path, CStringArray& ary);
+	void AllJson2xml();
 	CString GetFilePath(int nIndex);
 
 protected:
@@ -90,8 +96,8 @@ public:
 
 // 属性
 public:
-	std::vector<std::pair<int, std::string> > lines_2;
-	std::vector<std::pair<int, std::string> > lines_1;
+	std::vector<std::pair<int, std::string> > lines_zh;
+	std::vector<std::pair<int, std::string> > lines_en;
 // 操作
 public:
 	CString strXmlFile;
@@ -117,12 +123,17 @@ public:
 	afx_msg void OnFileOpen();
 
 	afx_msg void OnSetSave();
+	void OnSetSave2();
 protected:
 	virtual BOOL SaveModified();
 public:
 	afx_msg void OnReMarked();
 	afx_msg void OnInherit();
 	afx_msg void OnUpdateInherit(CCmdUI *pCmdUI);
+	afx_msg void OnJson2Xml();
+	afx_msg void OnFindchange();
+	afx_msg void OnXml2Json();
+	afx_msg void OnAnalyse();
 };
 
 

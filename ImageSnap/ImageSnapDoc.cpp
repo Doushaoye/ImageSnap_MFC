@@ -16,6 +16,7 @@
 #include "Json/json.h"
 #include "Setproperty.h"
 #include <codecvt>
+#include <regex>
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -31,6 +32,10 @@ BEGIN_MESSAGE_MAP(CImageSnapDoc, CDocument)
 	ON_COMMAND(ID_RE_MARKED, &CImageSnapDoc::OnReMarked)
 	ON_COMMAND(ID_32805, &CImageSnapDoc::OnInherit)
 	ON_UPDATE_COMMAND_UI(ID_32805, &CImageSnapDoc::OnUpdateInherit)
+	ON_COMMAND(ID_32808, &CImageSnapDoc::OnJson2Xml)
+	ON_COMMAND(ID_32809, &CImageSnapDoc::OnFindchange)
+	ON_COMMAND(ID_32810, &CImageSnapDoc::OnXml2Json)
+	ON_COMMAND(ID_32811, &CImageSnapDoc::OnAnalyse)
 END_MESSAGE_MAP()
 
 
@@ -64,8 +69,9 @@ string UTF8ToGB(const char* str)
 	return result;
 }
 
-int find_all_files(const char * lpPath, std::vector<path_save>&lines_)
+int find_all_files(const char * lpPath, std::vector<path_save>&lines_,std::string search_str = ".")
 {
+	std::regex reg(search_str);
 	path_save txt_line;
 	using namespace std;
 	char szFind[MAX_PATH];
@@ -100,7 +106,7 @@ int find_all_files(const char * lpPath, std::vector<path_save>&lines_)
 			char* p = strrchr(FindFileData.cFileName, '.');
 			if (p)
 			{
-				//if (strcmp(p + 1, "avi") == 0 || strcmp(p + 1, "AVI") == 0)
+				if (regex_search(FindFileData.cFileName,reg))
 				{
 					txt_line.file_name = FindFileData.cFileName;
 					txt_line.file_path = szFilePath;
@@ -279,6 +285,7 @@ void CImageSnapDoc::OnFileOpen()
 void CImageSnapDoc::InitData()
 {
 	m_Display = 0;
+	m_ischange = 0;
 	m_ObjList.clear();
 	m_Polygon.clear();
 	m_Curve.clear();
@@ -287,8 +294,8 @@ void CImageSnapDoc::InitData()
 
 	//****
 	//load classname
-	lines_2.clear();
-	lines_1.clear();
+	lines_zh.clear();
+	lines_en.clear();
 
 	std::ifstream infile("21cls.txt");
 	std::ifstream infile1("21cls_English.txt");
@@ -302,7 +309,7 @@ void CImageSnapDoc::InitData()
 		//GB_str = UTF8ToGB(clsname.c_str());
 		int space_pos = clsname.find_first_of(' ');
 		std::string temp_name = clsname.substr(space_pos+1);
-		lines_2.push_back(std::make_pair(i, temp_name));
+		lines_zh.push_back(std::make_pair(i, temp_name));
 		i++;
 
 	}
@@ -315,7 +322,7 @@ void CImageSnapDoc::InitData()
 	{
 		int space_pos = clsname1.find_first_of(' ');
 		std::string temp_name = clsname1.substr(space_pos + 1);
-		lines_1.push_back(std::make_pair(i, temp_name));
+		lines_en.push_back(std::make_pair(i, temp_name));
 		i++;
 	}
 	infile1.close();
@@ -366,6 +373,7 @@ void CImageSnapDoc::SetSelect(int sign)
 			tmp.objbox.top =MIN(m_pWorkImg->height-1,MAX(0,tmp.objbox.top));
 			tmp.objbox.right =MIN(m_pWorkImg->width-1,MAX(tmp.objbox.left,tmp.objbox.right));
 			tmp.objbox.bottom =MIN(m_pWorkImg->height-1,MAX(tmp.objbox.top,tmp.objbox.bottom));
+			tmp.ischange = 1;
 			tmp.enable = TRUE;
 			if (IDOK == pSet.DoModal())
 			{
@@ -472,6 +480,7 @@ void CImageSnapDoc::SetSelect2(int sign)
 		tmp.objbox.right =MIN(m_pWorkImg->width-1,MAX(tmp.objbox.left,tmp.objbox.right));
 		tmp.objbox.bottom =MIN(m_pWorkImg->height-1,MAX(tmp.objbox.top,tmp.objbox.bottom));
 		tmp.enable = TRUE;
+		tmp.ischange = m_ischange;
 		m_ObjList[m_rect_i] = (tmp);
 		curpart = m_ObjList[m_rect_i].partlist.size() - 1;
 		curobj = m_ObjList.size() - 1;
@@ -793,6 +802,7 @@ void CImageSnapDoc::OnSaveJson()
 	imagelabel["width"] = m_pWorkImg->width;
 	imagelabel["height"] = m_pWorkImg->height;
 	imagelabel["depth"] = m_pWorkImg->depth;
+	//imagelabel["nChannels"] = m_pWorkImg->nChannels;
 	Value imageproperty;
 	if (m_Image.enable)
 	{
@@ -900,6 +910,7 @@ void CImageSnapDoc::OnSaveJson()
 		v_rect["property"] = v_property;
 		v_rect["class"] = "bndbox";
 		v_rect["name"] = Ob_name;
+		v_rect["ischange"] = m_ObjList[i].ischange;
 		imagelabel["Object"].append(v_rect);
 	}
 	for (unsigned int i = 0; i < m_Polygon.size(); i++)
@@ -1049,6 +1060,273 @@ void CImageSnapDoc::OnSaveJson()
 
 	printf("OnSaveJson()完成\n");
 }
+void CImageSnapDoc::OnSaveJson2()
+{
+	printf("OnSaveJson()\n");
+	using namespace Json;
+	Value root;
+	Value imagelabel;
+	imagelabel["width"] = m_width;
+	imagelabel["height"] = m_height;
+	imagelabel["depth"] = m_depth;
+	//imagelabel["nChannels"] = m_pWorkImg->nChannels;
+	Value imageproperty;
+	if (m_Image.enable)
+	{
+		for (unsigned int i = 0; i < m_Image.o_property.size(); i++)
+		{
+			/*std::string en_name;
+			int en_pos = m_Image.o_property[i].property_name.find_first_of("_");
+			if (en_pos != -1)
+			{
+				int zh_len = m_Image.o_property[i].property_name.size() - en_pos;
+
+				en_name.assign(m_Image.o_property[i].property_name, 0, en_pos);
+			}
+			else
+			{
+				en_name = m_Image.o_property[i].property_name;
+			}*/
+			imageproperty[m_Image.o_property[i].property_name] = m_Image.o_property[i].property_id;
+		}
+	}
+	imagelabel["property"] = imageproperty;
+	/*imagelabel["street"] = "road";
+	imagelabel["weather"] = "clear";
+	imagelabel["time"] = "morning";*/
+	for (unsigned int i = 0; i < m_ObjList.size(); i++)
+	{
+		//if (m_ObjList[i].enable == FALSE)
+		//{
+		//	continue;
+		//}
+		Value v_rect;
+		Value v_property;
+		Value v_point;
+		string Ob_name = objclass[m_ObjList[i].iobjclass];
+		for (unsigned int j = 0; j < m_ObjList[i].o_property.size(); j++)
+		{
+			//std::string en_name;
+			//int en_pos = m_ObjList[i].o_property[j].property_name.find_first_of("_");
+			//if (en_pos != -1)
+			//{
+			//	int zh_len = m_ObjList[i].o_property[j].property_name.size() - en_pos;
+
+			//	en_name.assign(m_ObjList[i].o_property[j].property_name, 0, en_pos);
+			//}
+			//else
+			//{
+			//	en_name = m_ObjList[i].o_property[j].property_name;
+			//}
+			v_property[m_ObjList[i].o_property[j].property_name] = m_ObjList[i].o_property[j].property_id;  //int 型 id和value相同
+
+		}
+		/*v_property["truncated"] = m_ObjList[i].truncated;
+		v_property["occluded"] = m_ObjList[i].occluded;
+		v_property["difficult"] = m_ObjList[i].difficult;
+		v_property["pose"] = m_ObjList[i].pose;*/
+		v_point["p1"].append(m_ObjList[i].objbox.left);
+		v_point["p1"].append(m_ObjList[i].objbox.top);
+		v_point["p2"].append(m_ObjList[i].objbox.right);
+		v_point["p2"].append(m_ObjList[i].objbox.bottom);
+		v_rect["rect"] = v_point;
+		for (unsigned int j = 0; j < m_ObjList[i].partlist.size(); j++)
+		{
+			if (FALSE == m_ObjList[i].partlist[j].enable)
+			{
+				continue;
+			}
+			Value v_part;
+			Value v_p_point;
+			Value v_p_property;
+			string Pt_name = g_part[m_ObjList[i].partlist[j].ipartclass];
+			v_part["name"] = Pt_name;
+			if (m_ObjList[i].partlist[j].ablerect == TRUE)
+			{
+				v_part["class"] = "bndbox";
+				v_p_point["p1"].append(m_ObjList[i].partlist[j].partrect.left);
+				v_p_point["p1"].append(m_ObjList[i].partlist[j].partrect.top);
+				v_p_point["p2"].append(m_ObjList[i].partlist[j].partrect.right);
+				v_p_point["p2"].append(m_ObjList[i].partlist[j].partrect.bottom);
+				/*v_p_property["truncated"] = FALSE;
+				v_p_property["occluded"] = FALSE;
+				v_p_property["difficult"] = FALSE;
+				v_p_property["pose"] = m_ObjList[i].pose;*/
+				v_part["rect"] = v_p_point;
+				v_part["property"] = v_p_property;
+				v_rect["part"].append(v_part);
+			}
+			else
+			{
+				v_part["class"] = "polygon";
+				for (unsigned int k = 0; k < m_ObjList[i].partlist[j].polygon.size(); k++)
+				{
+					v_p_point["x"] = m_ObjList[i].partlist[j].polygon[k].x;
+					v_p_point["y"] = m_ObjList[i].partlist[j].polygon[k].y;
+					v_part["polygon"].append(v_p_point);
+				}
+				/*v_p_property["truncated"] = FALSE;
+				v_p_property["occluded"] = FALSE;
+				v_p_property["difficult"] = FALSE;
+				v_p_property["pose"] = m_ObjList[i].pose;*/
+				v_part["rect"] = v_p_point;
+				v_part["property"] = v_p_property;
+				v_rect["part"].append(v_part);
+			}
+		}
+		v_rect["property"] = v_property;
+		v_rect["class"] = "bndbox";
+		v_rect["name"] = Ob_name;
+		v_rect["ischange"] = m_ObjList[i].ischange;
+		imagelabel["Object"].append(v_rect);
+	}
+	for (unsigned int i = 0; i < m_Polygon.size(); i++)
+	{
+		if (m_Polygon[i].enable == FALSE)
+		{
+			continue;
+		}
+		Value v_polygon;
+		Value v_property;
+		Value v_point;
+		string Ob_name = objclass[m_Polygon[i].iobjclass];
+
+		for (unsigned int j = 0; j < m_Polygon[i].o_property.size(); j++)
+		{
+			/*	std::string en_name;
+				int en_pos = m_Polygon[i].o_property[j].property_name.find_first_of("_");
+				if (en_pos != -1)
+				{
+					int zh_len = m_Polygon[i].o_property[j].property_name.size() - en_pos;
+
+					en_name.assign(m_Polygon[i].o_property[j].property_name, 0, en_pos);
+				}
+				else
+				{
+					en_name = m_Polygon[i].o_property[j].property_name;
+				}*/
+			v_property[m_Polygon[i].o_property[j].property_name] = m_Polygon[i].o_property[j].property_id;
+
+		}
+
+		for (unsigned int k = 0; k < m_Polygon[i].objpolygon.size(); k++)
+		{
+			v_point["x"] = m_Polygon[i].objpolygon[k].x;
+			v_point["y"] = m_Polygon[i].objpolygon[k].y;
+			v_polygon["polygon"].append(v_point);
+		}
+		for (unsigned int j = 0; j < m_Polygon[i].partlist.size(); j++)
+		{
+			if (FALSE == m_Polygon[i].partlist[j].enable)
+			{
+				continue;
+			}
+			Value v_part;
+			Value v_p_point;
+			Value v_p_property;
+			string Pt_name = g_part[m_Polygon[i].partlist[j].ipartclass];
+			v_part["name"] = Pt_name;
+			if (m_Polygon[i].partlist[j].ablerect == TRUE)
+			{
+				v_part["class"] = "bndbox";
+				v_p_point["p1"].append(m_Polygon[i].partlist[j].partrect.left);
+				v_p_point["p1"].append(m_Polygon[i].partlist[j].partrect.top);
+				v_p_point["p2"].append(m_Polygon[i].partlist[j].partrect.right);
+				v_p_point["p2"].append(m_Polygon[i].partlist[j].partrect.bottom);
+				//v_p_property["truncated"] = FALSE;
+				//v_p_property["occluded"] = FALSE;
+				//v_p_property["difficult"] = FALSE;
+				//v_p_property["pose"] = 0;
+				v_part["rect"] = v_p_point;
+				v_part["property"] = v_p_property;
+				v_polygon["part"].append(v_part);
+			}
+			else
+			{
+				v_part["class"] = "polygon";
+				for (unsigned int k = 0; k < m_Polygon[i].partlist[j].polygon.size(); k++)
+				{
+					v_p_point["x"] = m_Polygon[i].partlist[j].polygon[k].x;
+					v_p_point["y"] = m_Polygon[i].partlist[j].polygon[k].y;
+					v_part["polygon"].append(v_p_point);
+				}
+				//v_p_property["truncated"] = FALSE;
+				//v_p_property["occluded"] = FALSE;
+				//v_p_property["difficult"] = FALSE;
+				//v_p_property["pose"] = 0;
+				v_part["rect"] = v_p_point;
+				v_part["property"] = v_p_property;
+				v_polygon["part"].append(v_part);
+			}
+		}
+		v_polygon["property"] = v_property;
+		v_polygon["class"] = "polygon";
+		v_polygon["name"] = Ob_name;
+		imagelabel["Object"].append(v_polygon);
+	}
+	for (unsigned int i = 0; i < m_Curve.size(); i++)
+	{
+		if (m_Curve[i].enable == FALSE)
+		{
+			continue;
+		}
+		Value v_curve;
+		Value v_property;
+		Value v_point;
+		string Ob_name = objclass[m_Curve[i].iobjclass];
+
+		for (unsigned int j = 0; j < m_Curve[i].o_property.size(); j++)
+		{
+			//std::string en_name;
+			//int en_pos = m_Curve[i].o_property[j].property_name.find_first_of("_");
+			//if (en_pos != -1)
+			//{
+			//	int zh_len = m_Curve[i].o_property[j].property_name.size() - en_pos;
+
+			//	en_name.assign(m_Curve[i].o_property[j].property_name, 0, en_pos);
+			//}
+			//else
+			//{
+			//	en_name = m_Curve[i].o_property[j].property_name;
+			//}
+			v_property[m_Curve[i].o_property[j].property_name] = m_Curve[i].o_property[j].property_id;
+
+		}
+
+		for (unsigned int k = 0; k < m_Curve[i].objcurve.size(); k++)
+		{
+			string num = to_string(k + 1);
+			string px, py, c1x, c1y, c2x, c2y;
+			px = "x" + num;
+			py = "y" + num;
+			c1x = px + "_c1";
+			c1y = py + "_c1";
+			c2x = px + "_c2";
+			c2y = py + "_c2";
+			v_point[px] = m_Curve[i].objcurve[k].p.x;
+			v_point[py] = m_Curve[i].objcurve[k].p.y;
+			v_point[c1x] = m_Curve[i].objcurve[k].c1.x;
+			v_point[c1y] = m_Curve[i].objcurve[k].c1.y;
+			v_point[c2x] = m_Curve[i].objcurve[k].c2.x;
+			v_point[c2y] = m_Curve[i].objcurve[k].c2.y;
+
+		}
+		v_curve["point"] = v_point;
+		v_curve["property"] = v_property;
+		v_curve["class"] = "curve";
+		v_curve["name"] = Ob_name;
+		imagelabel["Object"].append(v_curve);
+	}
+	root["name"] = (string)m_filename;
+	root["imagelabel"] = imagelabel;
+	ofstream ofs;
+	string save_path = "./data/" + (string)m_filename + ".json";
+
+	ofs.open(save_path, ios::trunc);
+	ofs << root.toStyledString();
+
+	printf("OnSaveJson()完成\n");
+}
 void CImageSnapDoc::OnSetSave()
 {
 	// TODO: 在此添加命令处理程序代码
@@ -1110,7 +1388,9 @@ void CImageSnapDoc::OnSetSave()
 		//dif
 		xml.AddChildElem("difficult","0");
 		//Rect
+		xml.AddChildElem("ischange", (int)m_ObjList[i].ischange);
 		xml.AddChildElem("bndbox");
+		
 		xml.IntoElem();
 
 		m_ObjList[i].objbox.left =MIN(m_pWorkImg->width-1,MAX(0,m_ObjList[i].objbox.left));
@@ -1240,7 +1520,127 @@ void CImageSnapDoc::OnSetSave()
 	return;
 
 }
+void CImageSnapDoc::OnSetSave2()
+{
+	// TODO: 在此添加命令处理程序代码
 
+	CString strTmp;
+
+	CMarkupMSXML xml;
+	xml.SetDoc("<annotation>\r\n</annotation>");
+	//头信息
+	xml.FindChildElem("annotation");
+	xml.AddChildElem("folder", "VOC2007");
+	xml.AddChildElem("filename", m_filename + "." + "jpg");
+
+	xml.AddChildElem("source");
+	xml.IntoElem();
+	xml.AddChildElem("database", "The VOC2007 Database");
+	xml.AddChildElem("annotation", "PASCAL VOC2007");
+	xml.AddChildElem("image", "flickr");
+	xml.OutOfElem();
+
+	//图像信息
+	xml.AddChildElem("size");
+	xml.IntoElem();
+	strTmp.Format("%d", m_width);
+	xml.AddChildElem("width", strTmp);
+	strTmp.Format("%d", m_height);
+	xml.AddChildElem("height", strTmp);
+	strTmp.Format("%d", m_depth);
+	xml.AddChildElem("depth", strTmp);
+	xml.OutOfElem();
+
+	//segmented字段
+	xml.AddChildElem("segmented", "0");
+
+	//目标
+	for (unsigned int i = 0; i < m_ObjList.size(); i++)
+	{
+		if (FALSE == m_ObjList[i].enable)
+		{
+			continue;
+		}
+		xml.AddChildElem("object");
+		xml.IntoElem();
+		//name
+		xml.AddChildElem("name", objclass[m_ObjList[i].iobjclass]);
+		//pose
+		xml.AddChildElem("pose", g_pose[m_ObjList[i].pose]);
+		//遮挡
+		strTmp.Format("%d", (int)m_ObjList[i].truncated);
+		xml.AddChildElem("truncated", strTmp);
+		//遮挡
+		strTmp.Format("%d", (int)m_ObjList[i].occluded);
+		xml.AddChildElem("occluded", strTmp);
+		//dif
+		xml.AddChildElem("difficult", "0");
+		//Rect
+		xml.AddChildElem("ischange", (int)m_ObjList[i].ischange);
+		xml.AddChildElem("bndbox");
+		xml.IntoElem();
+
+		m_ObjList[i].objbox.left = MIN(m_width - 1, MAX(0, m_ObjList[i].objbox.left));
+		m_ObjList[i].objbox.top = MIN(m_height - 1, MAX(0, m_ObjList[i].objbox.top));
+		m_ObjList[i].objbox.right = MIN(m_width - 1, MAX(m_ObjList[i].objbox.left, m_ObjList[i].objbox.right));
+		m_ObjList[i].objbox.bottom = MIN(m_height - 1, MAX(m_ObjList[i].objbox.top, m_ObjList[i].objbox.bottom));
+
+		strTmp.Format("%d", m_ObjList[i].objbox.left);
+		xml.AddChildElem("xmin", strTmp);
+		strTmp.Format("%d", m_ObjList[i].objbox.top);
+		xml.AddChildElem("ymin", strTmp);
+		strTmp.Format("%d", m_ObjList[i].objbox.right);
+		xml.AddChildElem("xmax", strTmp);
+		strTmp.Format("%d", m_ObjList[i].objbox.bottom);
+		xml.AddChildElem("ymax", strTmp);
+		xml.OutOfElem();
+
+		//part
+		for (unsigned int j = 0; j < m_ObjList[i].partlist.size(); j++)
+		{
+			if (FALSE == m_ObjList[i].partlist[j].enable)
+			{
+				continue;
+			}
+			xml.AddChildElem("part");
+			xml.IntoElem();
+			xml.AddChildElem("name", g_part[m_ObjList[i].partlist[j].ipartclass]);
+			xml.AddChildElem("bndbox");
+
+			xml.IntoElem();
+
+			m_ObjList[i].partlist[j].partrect.left = MIN(m_ObjList[i].objbox.right, MAX(m_ObjList[i].objbox.left, m_ObjList[i].partlist[j].partrect.left));
+			m_ObjList[i].partlist[j].partrect.top = MIN(m_ObjList[i].objbox.bottom, MAX(m_ObjList[i].objbox.top, m_ObjList[i].partlist[j].partrect.top));
+			m_ObjList[i].partlist[j].partrect.right = MIN(m_ObjList[i].objbox.right, MAX(m_ObjList[i].partlist[j].partrect.left, m_ObjList[i].partlist[j].partrect.right));
+			m_ObjList[i].partlist[j].partrect.bottom = MIN(m_ObjList[i].objbox.bottom, MAX(m_ObjList[i].partlist[j].partrect.top, m_ObjList[i].partlist[j].partrect.bottom));
+
+			strTmp.Format("%d", m_ObjList[i].partlist[j].partrect.left);
+			xml.AddChildElem("xmin", strTmp);
+			strTmp.Format("%d", m_ObjList[i].partlist[j].partrect.top);
+			xml.AddChildElem("ymin", strTmp);
+			strTmp.Format("%d", m_ObjList[i].partlist[j].partrect.right);
+			xml.AddChildElem("xmax", strTmp);
+			strTmp.Format("%d", m_ObjList[i].partlist[j].partrect.bottom);
+			xml.AddChildElem("ymax", strTmp);
+			//xml.AddChildElem("color", m_ObjList[i].partlist[j].color);
+
+			xml.OutOfElem();
+			xml.OutOfElem();
+
+		}
+		xml.OutOfElem();
+	}
+	CString strCurpath = GetCurPath();
+	SetSysPath();
+	CString savefile;
+	savefile = ".\\data\\" + m_filename + ".xml";
+	//remove(savefile);
+	xml.Save(savefile);
+	SetCurrentDirectory(strCurpath);
+	printf("OnSetSave()完成\n");
+	return;
+
+}
 BOOL CImageSnapDoc::ReadJsonInfo(CString filename)
 {
 	using namespace Json;
@@ -1252,7 +1652,15 @@ BOOL CImageSnapDoc::ReadJsonInfo(CString filename)
 
 
 	SetSysPath();
-	strXmlFile = ".\\data\\" + filename + ".json";
+	if (-1 == filename.Find("json",0))
+	{
+		strXmlFile = ".\\data\\" + filename + ".json";
+	}
+	else
+	{
+		strXmlFile = filename;
+	}
+
 	CFileFind   find;
 	if (!find.FindFile(strXmlFile))
 		return FALSE;
@@ -1333,14 +1741,18 @@ BOOL CImageSnapDoc::ReadJsonInfo(CString filename)
 							if (classname == "bndbox")
 							{
 								_Object objTmp;
+								if (Object[i].isMember("ischange") && Object[i]["ischange"].isInt())
+								{
+									objTmp.ischange = Object[i]["ischange"].asInt();
+								}
 								if (Object[i].isMember("name") && Object[i]["name"].isString())
 								{
 									CString name = Object[i]["name"].asCString();
 									objTmp.classname = Object[i]["name"].asString();
 									objTmp.enable = TRUE;
-									for (unsigned int j = 0; j < lines_1.size(); j++)
+									for (unsigned int j = 0; j < lines_en.size(); j++)
 									{
-										CString Comparename = lines_1[j].second.c_str();
+										CString Comparename = lines_en[j].second.c_str();
 										if (0 == name.CompareNoCase(Comparename))
 										{
 											objTmp.iobjclass = j;
@@ -1486,9 +1898,9 @@ BOOL CImageSnapDoc::ReadJsonInfo(CString filename)
 								CString name = Object[i]["name"].asCString();
 								obpoly.classname = Object[i]["name"].asString();
 								obpoly.enable = TRUE;
-								for (unsigned int j = 0; j < lines_1.size(); j++)
+								for (unsigned int j = 0; j < lines_en.size(); j++)
 								{
-									CString Comparename = lines_1[j].second.c_str();
+									CString Comparename = lines_en[j].second.c_str();
 									if (0 == name.CompareNoCase(Comparename))
 									{
 										obpoly.iobjclass = j;
@@ -1630,9 +2042,9 @@ BOOL CImageSnapDoc::ReadJsonInfo(CString filename)
 								CString name = Object[i]["name"].asCString();
 								obcurve.classname = Object[i]["name"].asString();
 								obcurve.enable = TRUE;
-								for (unsigned int j = 0; j < lines_1.size(); j++)
+								for (unsigned int j = 0; j < lines_en.size(); j++)
 								{
-									CString Comparename = lines_1[j].second.c_str();
+									CString Comparename = lines_en[j].second.c_str();
 									if (0 == name.CompareNoCase(Comparename))
 									{
 										obcurve.iobjclass = j;
@@ -1705,6 +2117,477 @@ BOOL CImageSnapDoc::ReadJsonInfo(CString filename)
 	}
 	return TRUE;
 }
+
+BOOL CImageSnapDoc::ReadJsonInfo2(CString filename)
+{
+	using namespace Json;
+	if (filename.IsEmpty())
+	{
+		return FALSE;
+	}
+	CString strCurPath = GetCurPath();
+	m_ObjList.clear();
+	m_Curve.clear();
+	m_Polygon.clear();
+	m_Image.o_property.clear();
+	SetSysPath();
+	strXmlFile = ".\\data\\" + filename;
+	int m = filename.ReverseFind('.');
+	if (m != -1)
+	{
+		m_filename = filename.Left(m);
+	}
+	CFileFind   find;
+	if (!find.FindFile(strXmlFile))
+		return FALSE;
+
+
+	ifstream ifs;
+	ifs.open(strXmlFile);
+	Value root;
+	CharReaderBuilder fh;
+	JSONCPP_STRING errs;
+	parseFromStream(fh, ifs, &root, &errs);
+
+
+	ifstream ifs2;
+	string setpath = "./set.json";
+	ifs2.open(setpath);
+	Value setroot;
+	CharReaderBuilder fh2;
+	JSONCPP_STRING errs2;
+	parseFromStream(fh2, ifs2, &setroot, &errs2);
+
+	if (!root.isMember("name"))
+	{
+		AfxMessageBox("文件名不符合");
+		return FALSE;
+	}
+	if (root.isMember("imagelabel"))
+	{
+		if (root["imagelabel"].isObject())
+		{
+			Value imagelabel = root["imagelabel"];
+			if (imagelabel.isMember("width") && imagelabel["width"].isInt() && imagelabel.isMember("height") && imagelabel["height"].isInt() && imagelabel.isMember("depth") && imagelabel["depth"].isInt())
+			{
+				m_width = imagelabel["width"].asInt();
+				m_height = imagelabel["height"].asInt();
+				m_depth = imagelabel["depth"].asInt();
+			}
+			if (imagelabel.isMember("property") && imagelabel["property"].isObject())
+			{
+				Value img_property = imagelabel["property"];
+				Value::Members propertyMember = img_property.getMemberNames();
+				for (Value::Members::iterator it = propertyMember.begin(); it != propertyMember.end(); ++it)
+				{
+					ss_property Set;
+					Set.property_id = img_property[*it].asInt();
+					Set.property_name = *it;
+					if (setroot.isMember("image"))
+					{
+						if (setroot["image"][*it].isArray())
+						{
+							Set.property_options = setroot["image"][*it][Set.property_id].asString();
+						}
+						else if (setroot["image"][*it].isInt())
+						{
+							Set.property_value = setroot["image"][*it].asInt();
+						}
+					}
+
+					m_Image.o_property.push_back(Set);
+				}
+			}
+			if (imagelabel.isMember("Object") && imagelabel["Object"].isArray())
+			{
+				Value Object = imagelabel["Object"];
+				int ob_size = Object.size();
+				for (int i = 0; i < ob_size; i++)
+				{
+					if (Object[i].isObject())
+					{
+						if (Object[i].isMember("class") && Object[i]["class"].isString())
+						{
+							string classname = Object[i]["class"].asString();
+							if (classname == "bndbox")
+							{
+								_Object objTmp;
+								if (Object[i].isMember("ischange") && Object[i]["ischange"].isInt())
+								{
+									objTmp.ischange = Object[i]["ischange"].asInt();
+								}
+								if (Object[i].isMember("name") && Object[i]["name"].isString())
+								{
+									CString name = Object[i]["name"].asCString();
+									objTmp.classname = Object[i]["name"].asString();
+									objTmp.enable = TRUE;
+									for (unsigned int j = 0; j < lines_en.size(); j++)
+									{
+										CString Comparename = lines_en[j].second.c_str();
+										if (0 == name.CompareNoCase(Comparename))
+										{
+											objTmp.iobjclass = j;
+											break;
+										}
+									}
+								}
+								if (Object[i].isMember("property") && Object[i]["property"].isObject())
+								{
+									Value v_property = Object[i]["property"];
+									Value::Members propertyMember = v_property.getMemberNames();
+									for (Value::Members::iterator it = propertyMember.begin(); it != propertyMember.end(); ++it)
+									{
+										ss_property Set;
+										string name = Object[i]["name"].asString();
+										Set.property_id = v_property[*it].asInt();
+										Set.property_name = *it;
+										if (setroot.isMember(name))
+										{
+											if (setroot[name][*it].isArray())
+											{
+												Set.property_options = setroot[name][*it][Set.property_id].asString();
+											}
+											else if (setroot[name][*it].isInt())
+											{
+												Set.property_value = v_property[*it].asInt();
+											}
+										}
+
+										objTmp.o_property.push_back(Set);
+									}
+
+								}
+								objTmp.difficult = TRUE;
+								objTmp.occluded = FALSE;
+								objTmp.truncated = FALSE;
+								objTmp.pose = 0;
+								if (Object[i].isMember("rect") && Object[i]["rect"].isObject())
+								{
+									Value v_rect = Object[i]["rect"];
+									if (v_rect.isMember("p1") && v_rect["p1"].isArray() && v_rect.isMember("p2") && v_rect["p2"].isArray())
+									{
+										objTmp.objbox.left = v_rect["p1"][0].asInt();
+										objTmp.objbox.top = v_rect["p1"][1].asInt();
+										objTmp.objbox.right = v_rect["p2"][0].asInt();
+										objTmp.objbox.bottom = v_rect["p2"][1].asInt();
+									}
+								}
+								if (Object[i].isMember("part") && Object[i]["part"].isArray())
+								{
+									_Part partTmp;
+									partTmp.enable = TRUE;
+									partTmp.ipartclass = 0;
+									partTmp.partrect.SetRectEmpty();
+									Value v_part = Object[i]["part"];
+									for (unsigned int j = 0; j < v_part.size(); j++)
+									{
+										if (v_part[j].isObject())
+										{
+											if (v_part[j].isMember("class") && v_part[j]["class"].isString())
+											{
+												string part_class = v_part[j]["class"].asString();
+												if (part_class == "bndbox")
+												{
+													if (v_part[j].isMember("name") && v_part[j]["name"].isString())
+													{
+														CString name = v_part[j]["name"].asCString();
+														for (unsigned int i = 0; i < NUM_PART; i++)
+														{
+															if (0 == name.CompareNoCase(g_part[i]))
+															{
+																partTmp.ipartclass = i;
+																break;
+															}
+														}
+													}
+													if (v_part[j].isMember("property") && v_part[j]["property"].isObject())
+													{
+														Value v_p_property = v_part[j]["property"];
+
+														/*partTmp.truncated = v_p_property["truncated"];
+														partTmp.occluded = v_p_property["occluded"];
+														partTmp.difficult = v_p_property["difficult"];
+														partTmp.pose = v_p_property["pose"];*/
+													}
+													if (v_part[j].isMember("rect") && v_part[j]["rect"].isObject())
+													{
+														Value v_rect = v_part[j]["rect"];
+														if (v_rect.isMember("p1") && v_rect["p1"].isArray() && v_rect.isMember("p2") && v_rect["p2"].isArray())
+														{
+															partTmp.partrect.left = v_rect["p1"][0].asInt64();
+															partTmp.partrect.top = v_rect["p1"][1].asInt64();
+															partTmp.partrect.right = v_rect["p2"][0].asInt64();
+															partTmp.partrect.bottom = v_rect["p2"][1].asInt64();
+															partTmp.ablerect = TRUE;
+														}
+													}
+												}
+												else if (part_class == "polygon")
+												{
+													if (v_part[j].isMember("name") && v_part[j]["name"].isString())
+													{
+														CString name = v_part[j]["name"].asCString();
+														for (unsigned int i = 0; i < NUM_PART; i++)
+														{
+															if (0 == name.CompareNoCase(g_part[i]))
+															{
+																partTmp.ipartclass = i;
+																break;
+															}
+														}
+													}
+													if (v_part[j].isMember("property") && v_part[j]["property"].isObject())
+													{
+														Value v_p_property = v_part[j]["property"];
+														/*partTmp.truncated = v_p_property["truncated"];
+														partTmp.occluded = v_p_property["occluded"];
+														partTmp.difficult = v_p_property["difficult"];
+														partTmp.pose = v_p_property["pose"];*/
+													}
+													if (v_part[j].isMember("polygon") && v_part[j]["polygon"].isArray())
+													{
+														Value v_polygon = v_part[j]["polygon"];
+														for (unsigned int k = 0; k < v_polygon.size(); k++)
+														{
+															Point v_point(v_polygon[k]["x"].asInt(), v_polygon[k]["y"].asInt());
+															partTmp.polygon.push_back(v_point);
+															partTmp.ablerect = FALSE;
+														}
+													}
+												}
+											}
+										}
+										objTmp.partlist.push_back(partTmp);
+									}
+								}
+
+								m_ObjList.push_back(objTmp);
+							}
+							else if (classname == "polygon")
+							{
+								_Polygon obpoly;
+								CString name = Object[i]["name"].asCString();
+								obpoly.classname = Object[i]["name"].asString();
+								obpoly.enable = TRUE;
+								for (unsigned int j = 0; j < lines_en.size(); j++)
+								{
+									CString Comparename = lines_en[j].second.c_str();
+									if (0 == name.CompareNoCase(Comparename))
+									{
+										obpoly.iobjclass = j;
+										break;
+									}
+								}
+								if (Object[i].isMember("property") && Object[i]["property"].isObject())
+								{
+									Value v_property = Object[i]["property"];
+									Value::Members propertyMember = v_property.getMemberNames();
+									for (Value::Members::iterator it = propertyMember.begin(); it != propertyMember.end(); ++it)
+									{
+										ss_property Set;
+										string name = Object[i]["name"].asString();
+										Set.property_id = v_property[*it].asInt();
+										Set.property_name = *it;
+										if (setroot.isMember(name))
+										{
+											if (setroot[name][*it].isArray())
+											{
+												Set.property_options = setroot[name][*it][Set.property_id].asString();
+											}
+											else if (setroot[name][*it].isInt())
+											{
+												Set.property_value = v_property[*it].asInt();
+											}
+										}
+										obpoly.o_property.push_back(Set);
+									}
+
+								}
+								obpoly.difficult = TRUE;
+								obpoly.occluded = FALSE;
+								obpoly.truncated = FALSE;
+								obpoly.pose = 0;
+								if (Object[i].isMember("polygon") && Object[i]["polygon"].isArray())
+								{
+									Value polygon = Object[i]["polygon"];
+									for (unsigned int j = 0; j < polygon.size(); j++)
+									{
+										Point v_point(polygon[j]["x"].asInt(), polygon[j]["y"].asInt());
+										obpoly.objpolygon.push_back(v_point);
+									}
+								}
+								if (Object[i].isMember("part") && Object[i]["part"].isArray())
+								{
+									_Part partTmp;
+									partTmp.enable = 1;
+									partTmp.ipartclass = 0;
+									partTmp.partrect.SetRectEmpty();
+									Value v_part = Object[i]["part"];
+									for (unsigned int j = 0; j < v_part.size(); j++)
+									{
+										if (v_part[j].isObject())
+										{
+											if (v_part[j].isMember("class") && v_part[j]["class"].isString())
+											{
+												string part_class = v_part[j]["class"].asString();
+												if (part_class == "bndbox")
+												{
+													if (v_part[j].isMember("name") && v_part[j]["name"].isString())
+													{
+														CString name = v_part[j]["name"].asCString();
+														for (unsigned int i = 0; i < NUM_PART; i++)
+														{
+															if (0 == name.CompareNoCase(g_part[i]))
+															{
+																partTmp.ipartclass = i;
+																break;
+															}
+														}
+													}
+													if (v_part[j].isMember("property") && v_part[j]["property"].isObject())
+													{
+														Value v_p_property = v_part[j]["property"];
+														/*partTmp.truncated = v_p_property["truncated"];
+														partTmp.occluded = v_p_property["occluded"];
+														partTmp.difficult = v_p_property["difficult"];
+														partTmp.pose = v_p_property["pose"];*/
+													}
+													if (v_part[j].isMember("rect") && v_part[j]["rect"].isObject())
+													{
+														Value v_rect = v_part[j]["rect"];
+														if (v_rect.isMember("p1") && v_rect["p1"].isArray() && v_rect.isMember("p2") && v_rect["p2"].isArray())
+														{
+															partTmp.partrect.left = v_rect["p1"][0].asInt64();
+															partTmp.partrect.top = v_rect["p1"][1].asInt64();
+															partTmp.partrect.right = v_rect["p2"][0].asInt64();
+															partTmp.partrect.bottom = v_rect["p2"][1].asInt64();
+															partTmp.ablerect = TRUE;
+														}
+													}
+												}
+												else if (part_class == "polygon")
+												{
+													if (v_part[j].isMember("name") && v_part[j]["name"].isString())
+													{
+														CString name = v_part[j]["name"].asCString();
+														for (unsigned int i = 0; i < NUM_PART; i++)
+														{
+															if (0 == name.CompareNoCase(g_part[i]))
+															{
+																partTmp.ipartclass = i;
+																break;
+															}
+														}
+													}
+													if (v_part[j].isMember("property") && v_part[j]["property"].isObject())
+													{
+														Value v_p_property = v_part[j]["property"];
+														/*partTmp.truncated = v_p_property["truncated"];
+														partTmp.occluded = v_p_property["occluded"];
+														partTmp.difficult = v_p_property["difficult"];
+														partTmp.pose = v_p_property["pose"];*/
+													}
+													if (v_part[j].isMember("polygon") && v_part[j]["polygon"].isArray())
+													{
+														Value v_polygon = v_part[j]["polygon"];
+														for (unsigned int k = 0; k < v_polygon.size(); k++)
+														{
+															Point v_point(v_polygon[k]["x"].asInt(), v_polygon[k]["y"].asInt());
+															partTmp.polygon.push_back(v_point);
+															partTmp.ablerect = FALSE;
+														}
+													}
+												}
+											}
+										}
+										obpoly.partlist.push_back(partTmp);
+									}
+								}
+
+								m_Polygon.push_back(obpoly);
+
+							}
+							else if (classname == "curve")
+							{
+								_Curve obcurve;
+								CString name = Object[i]["name"].asCString();
+								obcurve.classname = Object[i]["name"].asString();
+								obcurve.enable = TRUE;
+								for (unsigned int j = 0; j < lines_en.size(); j++)
+								{
+									CString Comparename = lines_en[j].second.c_str();
+									if (0 == name.CompareNoCase(Comparename))
+									{
+										obcurve.iobjclass = j;
+										break;
+									}
+								}
+								if (Object[i].isMember("property") && Object[i]["property"].isObject())
+								{
+									Value v_property = Object[i]["property"];
+
+									Value::Members propertyMember = v_property.getMemberNames();
+									for (Value::Members::iterator it = propertyMember.begin(); it != propertyMember.end(); ++it)
+									{
+										ss_property Set;
+										string name = Object[i]["name"].asString();
+										Set.property_id = v_property[*it].asInt();
+										Set.property_name = *it;
+										if (setroot.isMember(name))
+										{
+											if (setroot[name][*it].isArray())
+											{
+												Set.property_options = setroot[name][*it][Set.property_id].asString();
+											}
+											else if (setroot[name][*it].isInt())
+											{
+												Set.property_value = v_property[*it].asInt();
+											}
+										}
+										obcurve.o_property.push_back(Set);
+									}
+
+								}
+								obcurve.difficult = TRUE;
+								obcurve.occluded = FALSE;
+								obcurve.truncated = FALSE;
+								obcurve.pose = 0;
+								if (Object[i].isMember("point") && Object[i]["point"].isObject())
+								{
+									Value v_curve = Object[i]["point"];
+									int curve_point_size = Object[i]["point"].size();
+									int kmax = curve_point_size / 6;
+									for (int k = 1; k < kmax + 1; k++)
+									{
+										CurvePoint cp;
+										string num = to_string(k);
+										string pxname, pyname, c1xname, c1yname, c2xname, c2yname;
+										pxname = "x" + num;
+										pyname = "y" + num;
+										c1xname = pxname + "_c1";
+										c1yname = pyname + "_c1";
+										c2xname = pxname + "_c2";
+										c2yname = pyname + "_c2";
+										cp.p.x = v_curve[pxname].asInt();
+										cp.p.y = v_curve[pyname].asInt();
+										cp.c1.x = v_curve[c1xname].asInt();
+										cp.c1.y = v_curve[c1yname].asInt();
+										cp.c2.x = v_curve[c2xname].asInt();
+										cp.c2.y = v_curve[c2yname].asInt();
+										obcurve.objcurve.push_back(cp);
+									}
+									m_Curve.push_back(obcurve);
+								}
+
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return TRUE;
+}
 //filename不包括扩展名
 void CImageSnapDoc::ReadXmlInfo(CString filename)
 {
@@ -1714,10 +2597,18 @@ void CImageSnapDoc::ReadXmlInfo(CString filename)
 	}
 	//CString strXmlFile;
 	CString strCurPath = GetCurPath();
-	
+	m_ObjList.clear();
+	m_Curve.clear();
+	m_Polygon.clear();
+	m_Image.o_property.clear();
 
 	SetSysPath();
-	strXmlFile = ".\\data\\"+filename+".xml";
+	strXmlFile = ".\\data\\"+filename;
+	int m = filename.ReverseFind('.');
+	if (m != -1)
+	{
+		m_filename = filename.Left(m);
+	}
 	CFileFind   find; 
 	if   (!find.FindFile( strXmlFile))
 		return;
@@ -1740,15 +2631,17 @@ void CImageSnapDoc::ReadXmlInfo(CString filename)
 	{
 		xml.IntoElem();
 		xml.FindChildElem("width");
-		int width = atoi(xml.GetChildData());
+		m_width = atoi(xml.GetChildData());
 		xml.FindChildElem("height");
-		int height = atoi(xml.GetChildData());
-		if (width!=m_pWorkImg->width || height!=m_pWorkImg->height)
-		{
-			AfxMessageBox("尺寸错误");
-			AfxMessageBox("00");
-			return;
-		}
+		m_height = atoi(xml.GetChildData());
+		xml.FindChildElem("depth");
+		m_depth = atoi(xml.GetChildData());
+		//if (width!=m_pWorkImg->width || height!=m_pWorkImg->height)
+		//{
+		//	AfxMessageBox("尺寸错误");
+		//	AfxMessageBox("00");
+		//	return;
+		//}
 		xml.OutOfElem();
 	}
 	else
@@ -1785,6 +2678,7 @@ void CImageSnapDoc::ReadXmlInfo(CString filename)
 		if (xml.FindChildElem("name"))
 		{
 			name = xml.GetChildData();
+			objTmp.classname = name;
 			for (unsigned int i = 0;i<NUM_OBJ;i++)
 			{
 				if (0 == name.CompareNoCase(objclass[i]))
@@ -1811,7 +2705,11 @@ void CImageSnapDoc::ReadXmlInfo(CString filename)
 			}
 		}
 
+		if (xml.FindChildElem("ischange"))
+		{
+			objTmp.ischange = atoi(xml.GetChildData());
 
+		}
 		if (xml.FindChildElem("truncated"))
 		{
 			objTmp.truncated = atoi(xml.GetChildData());
@@ -2032,15 +2930,24 @@ void CImageSnapDoc::GetAllFileNames(const CString& path, CStringArray& ary)
 
 	fileFind.Close();
 }
-
+void CImageSnapDoc::AllJson2xml()
+{
+	std::vector<path_save> jsonlist;
+	find_all_files("./data/", jsonlist,"json");
+	for (size_t i = 0; i < jsonlist.size(); i++)
+	{
+		ReadJsonInfo2(jsonlist[i].file_name.c_str());
+		OnSetSave2();
+	}
+	string message = "已经完成" + std::to_string(jsonlist.size()) + "个Json文件的转换";
+	AfxMessageBox(message.c_str());
+}
 void CImageSnapDoc::OpenFile()
 {
-
-	
 	printf("OpenFile()\n");
-	if (m_bModified)
+	if (1)
 	{
-		printf("存储xml和json\n");
+		//printf("存储xml和json\n");
 		_mkdir("./data/");
 		OnSaveJson();
 		OnSetSave();
@@ -2054,7 +2961,7 @@ void CImageSnapDoc::OpenFile()
 	InitData();
 
 	IplImage* pImg=NULL;
-
+	m_ischange = 0;
 	pImg = cvLoadImage(filename,1);      //  读图像文件(DSCV)
 	if (!pImg) 
 	{
@@ -2177,4 +3084,128 @@ void CImageSnapDoc::OnUpdateInherit(CCmdUI *pCmdUI)
 {
 	// TODO:  在此添加命令更新用户界面处理程序代码
 	pCmdUI->SetCheck(m_inherit);
+}
+
+
+void CImageSnapDoc::OnJson2Xml()
+{
+	// TODO: 在此添加命令处理程序代码
+	AllJson2xml();
+}
+
+
+void CImageSnapDoc::OnFindchange()
+{
+	// TODO: 在此添加命令处理程序代码
+	using namespace Json;
+	std::vector<path_save> jsonlist;
+	find_all_files("./data/", jsonlist,"json");
+	float change = 0;
+	float nochange = 0;
+	for (int i = 0; i < jsonlist.size(); i++)
+	{
+		std::string strXmlFile =  jsonlist[i].file_path;
+		ifstream ifs;
+		ifs.open(strXmlFile);
+		Value root;
+		CharReaderBuilder fh;
+		JSONCPP_STRING errs;
+		parseFromStream(fh, ifs, &root, &errs);
+		Value imagelabel = root["imagelabel"];
+		Value Object = imagelabel["Object"];
+		for (int j = 0; j < Object.size(); j++)
+		{
+			if (Object[j].isMember("ischange"))
+			{
+				if (Object[j]["ischange"].asInt() == 0)
+				{
+					nochange++;
+				}
+				else if (Object[j]["ischange"].asInt() == 1)
+				{
+					change++;
+				}
+
+			}
+		}
+	}
+	float rate = change / (change + nochange);
+	char message[50];
+	sprintf_s(message, "%s%f", "修改率为", rate);
+	AfxMessageBox(message);
+}
+
+
+void CImageSnapDoc::OnXml2Json()
+{
+	// TODO: 在此添加命令处理程序代码
+	std::vector<path_save> xmllist;
+	find_all_files("./data/", xmllist, "xml");
+	for (size_t i = 0; i < xmllist.size(); i++)
+	{
+		ReadXmlInfo(xmllist[i].file_name.c_str());
+		OnSaveJson2();
+	}
+	string message = "已经完成" + std::to_string(xmllist.size()) + "个Xml文件的转换";
+	AfxMessageBox(message.c_str());
+}
+
+
+void CImageSnapDoc::OnAnalyse()
+{
+	// TODO: 在此添加命令处理程序代码
+	using namespace Json;
+	std::vector<path_save> jsonlist;
+	find_all_files("./data/", jsonlist, "json");
+	int* count = new int[lines_en.size()];
+	std::string message;
+	for (size_t i = 0; i < lines_en.size(); i++)
+	{
+		count[i] = 0;
+	}
+	for (int i = 0; i < jsonlist.size(); i++)
+	{
+		ifstream ifs;
+		ifs.open(jsonlist[i].file_path);
+		Value root;
+		CharReaderBuilder fh;
+		JSONCPP_STRING errs;
+		parseFromStream(fh, ifs, &root, &errs);
+		Value Object = root["imagelabel"]["Object"];
+		for (int j = 0; j < Object.size(); j++)
+		{
+			for (int k = 0; k < lines_en.size(); k++)
+			{
+				if (Object[j]["name"].asString() == lines_en[k].second)
+				{
+					count[k]++;
+				}
+			}
+		}
+	}
+	if (lines_en.size()<20)
+	{
+		for (size_t i = 0; i < lines_en.size(); i++)
+		{
+			char s[50];
+			sprintf_s(s, "%s%s%d\n", lines_zh[i].second.c_str(), " 数量：", count[i]);
+			message = message + s;
+		}
+	}
+	else
+	{
+		ofstream file("Analyse.txt");
+		for (size_t i = 0; i < lines_en.size(); i++)
+		{
+			char s[50];
+			
+			sprintf_s(s, "%s%s%d\n", lines_zh[i].second.c_str(), " 数量：", count[i]);
+			file << s;
+		}
+		
+		file.close();
+		message = "Analyse.txt导出完毕！";
+	}
+	
+	AfxMessageBox(message.c_str());
 }
